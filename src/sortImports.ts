@@ -49,6 +49,29 @@ export function isCssImport(statement: string): boolean {
 }
 
 /**
+ * Normalize named-import braces to `{ a, b }` style: one space after `{`,
+ * after each comma, and before `}`. Only touches the clause before `from`.
+ */
+export function formatEsmImportBraces(line: string): string {
+  const fromIdx = line.search(/\bfrom\s+['"]/);
+  const head = fromIdx === -1 ? line : line.slice(0, fromIdx);
+  const tail = fromIdx === -1 ? '' : line.slice(fromIdx);
+
+  const formatted = head.replace(/\{([^}]*)\}/g, (_match, inner: string) => {
+    const parts = inner
+      .split(',')
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+    if (parts.length === 0) {
+      return '{ }';
+    }
+    return `{ ${parts.join(', ')} }`;
+  });
+
+  return formatted + tail;
+}
+
+/**
  * Trim trailing `;`. For PHP, also strip ` as Alias`.
  * For ESM, keep through the module specifier (the import path).
  */
@@ -195,8 +218,8 @@ function joinSections(sections: string[][]): string[] {
 }
 
 /**
- * Sort import lines. For ESM, CSS imports are removed from their sections
- * and appended as one sorted section below the rest.
+ * Sort import lines. For ESM, named-import braces are spaced, CSS imports
+ * are removed from their sections, and appended as one sorted section below.
  */
 export function sortImportRegion(
   lines: string[],
@@ -209,8 +232,12 @@ export function sortImportRegion(
     return joinSections(sections);
   }
 
+  const normalized = lines.map((line) =>
+    isBlankLine(line) ? line : formatEsmImportBraces(line)
+  );
+
   const css: string[] = [];
-  const sections = splitIntoSections(lines);
+  const sections = splitIntoSections(normalized);
   const nonCssSections: string[][] = [];
 
   for (const section of sections) {

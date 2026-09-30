@@ -2,7 +2,7 @@
   "name": "imports-sort",
   "displayName": "Imports Sort",
   "description": "Sort PHP use and JS/TS/Vue import statements shortest to longest, preserving sections",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "imports-sort",
   "engines": {
     "vscode": "^1.85.0"
@@ -11,7 +11,14 @@
     "Formatters",
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:php",
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "onLanguage:vue"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -20,7 +27,49 @@
         "title": "Sort Imports",
         "category": "Imports Sort"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Imports Sort",
+      "properties": {
+        "importsSort.sortOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically sort imports when a supported file is saved."
+        },
+        "importsSort.fileExtensions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              ".php",
+              ".js",
+              ".mjs",
+              ".cjs",
+              ".jsx",
+              ".ts",
+              ".mts",
+              ".cts",
+              ".tsx",
+              ".vue"
+            ]
+          },
+          "default": [
+            ".php",
+            ".js",
+            ".mjs",
+            ".cjs",
+            ".jsx",
+            ".ts",
+            ".mts",
+            ".cts",
+            ".tsx",
+            ".vue"
+          ],
+          "uniqueItems": true,
+          "description": "File extensions where Imports Sort should run (command and sort-on-save)."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

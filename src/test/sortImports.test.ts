@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import {
   compareImportLines,
   compareUseLines,
+  formatEsmImportBraces,
   isCssImport,
   namespacePrefixLength,
   pathTokensetLength,
@@ -218,6 +219,59 @@ import { ref } from 'vue';
     "import { ref } from 'vue';",
     "import Foo from './Foo.vue';",
     "import './theme.css';",
+  ]);
+});
+
+check('formatEsmImportBraces spaces named import braces', () => {
+  assert.strictEqual(
+    formatEsmImportBraces("import {something,potato} from 'x';"),
+    "import { something, potato } from 'x';"
+  );
+  assert.strictEqual(
+    formatEsmImportBraces("import {  foo ,  bar  } from 'x';"),
+    "import { foo, bar } from 'x';"
+  );
+  assert.strictEqual(
+    formatEsmImportBraces("import Default, {foo} from 'x';"),
+    "import Default, { foo } from 'x';"
+  );
+  assert.strictEqual(
+    formatEsmImportBraces("import type {Foo,Bar} from 'x';"),
+    "import type { Foo, Bar } from 'x';"
+  );
+  assert.strictEqual(
+    formatEsmImportBraces("import { foo as bar,baz } from 'x';"),
+    "import { foo as bar, baz } from 'x';"
+  );
+  assert.strictEqual(
+    formatEsmImportBraces("import axios from 'axios';"),
+    "import axios from 'axios';"
+  );
+});
+
+check('esm sort formats braces even when already ordered', () => {
+  const sorted = sortImportRegion(
+    ["import {ref} from 'vue';", "import { longNameHere } from '@/utils/helpers';"],
+    'esm'
+  );
+  assert.deepStrictEqual(sorted, [
+    "import { ref } from 'vue';",
+    "import { longNameHere } from '@/utils/helpers';",
+  ]);
+});
+
+check('sortImportsInText formats typescript named import braces', () => {
+  const text = `import {longHelper,other} from './helpers';
+import {ref} from 'vue';
+
+export function main() {}
+`;
+  const result = sortImportsInText(text, 'typescript');
+  assert.ok(result !== null);
+  const importLines = result!.split('\n').filter((l) => l.startsWith('import '));
+  assert.deepStrictEqual(importLines, [
+    "import { ref } from 'vue';",
+    "import { longHelper, other } from './helpers';",
   ]);
 });
 
