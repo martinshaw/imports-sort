@@ -46,7 +46,7 @@ Non-CSS sections stay separate; CSS imports are collected and sorted at the bott
 npm install
 npm run compile
 npx @vscode/vsce package --allow-missing-repository
-cursor --install-extension ./imports-sort-0.0.2.vsix
+cursor --install-extension ./imports-sort-1.0.0.vsix
 ```
 
 Or use **Extensions: Install from VSIX…** in the Command Palette.
@@ -88,3 +88,5 @@ src/
   sortImports.ts    # Sorting logic (PHP + ESM + Vue SFC)
   test/             # Node-based unit tests
 ```
+
+Built with [Cursor](https://cursor.com) AI.

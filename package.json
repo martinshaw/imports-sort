@@ -2,7 +2,7 @@
   "name": "imports-sort",
   "displayName": "Imports Sort",
   "description": "Sort PHP use and JS/TS/Vue import statements shortest to longest, preserving sections",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "publisher": "imports-sort",
   "engines": {
     "vscode": "^1.85.0"
