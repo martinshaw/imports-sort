@@ -2,7 +2,7 @@
   "name": "imports-sort",
   "displayName": "Imports Sort",
   "description": "Sort PHP use and JS/TS/Vue import statements shortest to longest, preserving sections",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "publisher": "imports-sort",
   "license": "MIT",
   "repository": {
@@ -72,6 +72,39 @@
           ],
           "uniqueItems": true,
           "description": "File extensions where Imports Sort should run (command and sort-on-save)."
+        },
+        "importsSort.separateTypeImports": {
+          "type": "boolean",
+          "default": true,
+          "description": "Move `import type` statements into their own section after other ESM imports (before CSS)."
+        },
+        "importsSort.separateCssImports": {
+          "type": "boolean",
+          "default": true,
+          "description": "Move CSS/SCSS/etc. imports into their own section at the end of the import block."
+        },
+        "importsSort.quoteStyle": {
+          "type": "string",
+          "enum": ["single", "double", "detect"],
+          "default": "detect",
+          "description": "Normalize ESM module-specifier quotes. `detect` uses the majority style in the import region."
+        },
+        "importsSort.semicolons": {
+          "type": "string",
+          "enum": ["always", "never", "detect"],
+          "default": "detect",
+          "description": "Normalize trailing semicolons on import/`use` statements. `detect` uses the majority style in the import region."
+        },
+        "importsSort.collapseMultilineImports": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, collapse multi-line named imports to one line (or expand single-line imports that exceed the max length)."
+        },
+        "importsSort.collapseMultilineMaxLength": {
+          "type": "number",
+          "default": 100,
+          "minimum": 40,
+          "description": "Max preferred line length when collapseMultilineImports is enabled."
         }
       }
     }

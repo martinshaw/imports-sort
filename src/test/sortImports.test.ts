@@ -3,12 +3,16 @@ import {
   compareImportLines,
   compareUseLines,
   formatEsmImportBraces,
+  isCompleteEsmImport,
   isCssImport,
+  isTypeImport,
   namespacePrefixLength,
   pathTokensetLength,
   sortImportRegion,
   sortImportsInText,
   sortUseRegion,
+  toMultiLineImport,
+  toSingleLineImport,
 } from '../sortImports';
 
 function check(name: string, fn: () => void) {
@@ -273,6 +277,102 @@ export function main() {}
     "import { ref } from 'vue';",
     "import { longHelper, other } from './helpers';",
   ]);
+});
+
+check('isTypeImport detects import type', () => {
+  assert.ok(isTypeImport("import type { Foo } from './foo';"));
+  assert.ok(isTypeImport("import type Foo from './foo';"));
+  assert.ok(!isTypeImport("import { type Foo } from './foo';"));
+  assert.ok(!isTypeImport("import { Foo } from './foo';"));
+});
+
+check('esm separates type imports before css by default', () => {
+  const sorted = sortImportRegion(
+    [
+      "import './b.css';",
+      "import type { User } from './types';",
+      "import { ref } from 'vue';",
+      "import type { Id } from './id';",
+      "import Foo from './Foo.vue';",
+    ],
+    'esm'
+  );
+  assert.deepStrictEqual(sorted, [
+    "import { ref } from 'vue';",
+    "import Foo from './Foo.vue';",
+    '',
+    "import type { Id } from './id';",
+    "import type { User } from './types';",
+    '',
+    "import './b.css';",
+  ]);
+});
+
+check('esm can disable type and css separation', () => {
+  const sorted = sortImportRegion(
+    [
+      "import './b.css';",
+      "import type { User } from './types';",
+      "import { ref } from 'vue';",
+    ],
+    'esm',
+    { separateTypeImports: false, separateCssImports: false }
+  );
+  assert.deepStrictEqual(sorted, [
+    "import './b.css';",
+    "import { ref } from 'vue';",
+    "import type { User } from './types';",
+  ]);
+});
+
+check('quoteStyle single normalizes double quotes', () => {
+  const sorted = sortImportRegion(
+    ['import { ref } from "vue";', "import Foo from './Foo.vue';"],
+    'esm',
+    { quoteStyle: 'single' }
+  );
+  assert.deepStrictEqual(sorted, [
+    "import { ref } from 'vue';",
+    "import Foo from './Foo.vue';",
+  ]);
+});
+
+check('semicolons never strips trailing semicolons', () => {
+  const sorted = sortImportRegion(
+    ["import { ref } from 'vue';", "import Foo from './Foo.vue';"],
+    'esm',
+    { semicolons: 'never' }
+  );
+  assert.deepStrictEqual(sorted, [
+    "import { ref } from 'vue'",
+    "import Foo from './Foo.vue'",
+  ]);
+});
+
+check('collapseMultilineImports collapses short named imports', () => {
+  const multi = [
+    'import {',
+    '  ref,',
+    '  computed',
+    "} from 'vue';",
+  ];
+  assert.ok(!isCompleteEsmImport(multi[0]));
+  assert.ok(isCompleteEsmImport(multi.join('\n')));
+
+  const sorted = sortImportRegion(multi, 'esm', {
+    collapseMultilineImports: true,
+    collapseMultilineMaxLength: 100,
+  });
+  assert.deepStrictEqual(sorted, [
+    "import { ref, computed } from 'vue';",
+  ]);
+});
+
+check('toSingleLineImport and toMultiLineImport round-trip named imports', () => {
+  const one = "import { ref, computed } from 'vue';";
+  const multi = toMultiLineImport(one);
+  assert.ok(multi.includes('\n'));
+  assert.strictEqual(toSingleLineImport(multi), one);
 });
 
 check('unsupported language returns null', () => {

@@ -1,5 +1,13 @@
+import { execFile } from 'child_process';
 import * as vscode from 'vscode';
-import { kindForLanguageId, sortImportsInText } from './sortImports';
+import {
+  findImportRegion,
+  kindForLanguageId,
+  sortImportsInText,
+  type QuoteStyle,
+  type SemicolonStyle,
+  type SortOptions,
+} from './sortImports';
 
 /** File extensions → VS Code language IDs used for sorting. */
 export const EXTENSION_TO_LANGUAGE: Record<string, string> = {
@@ -16,6 +24,15 @@ export const EXTENSION_TO_LANGUAGE: Record<string, string> = {
 };
 
 export const ALL_EXTENSIONS = Object.keys(EXTENSION_TO_LANGUAGE);
+
+const SUPPORTED_LANGUAGE_SELECTOR: vscode.DocumentSelector = [
+  { language: 'php' },
+  { language: 'javascript' },
+  { language: 'javascriptreact' },
+  { language: 'typescript' },
+  { language: 'typescriptreact' },
+  { language: 'vue' },
+];
 
 function getConfig() {
   return vscode.workspace.getConfiguration('importsSort');
@@ -46,7 +63,6 @@ function isFileEnabled(document: vscode.TextDocument): boolean {
     return configured.includes(ext);
   }
 
-  // Untitled / no extension: allow if any configured extension maps to this language
   return configured.some(
     (e) => EXTENSION_TO_LANGUAGE[e] === document.languageId
   );
@@ -56,7 +72,54 @@ function shouldSortOnSave(): boolean {
   return getConfig().get<boolean>('sortOnSave', false);
 }
 
-function sortDocumentText(
+function getSortOptions(): SortOptions {
+  const config = getConfig();
+  return {
+    separateTypeImports: config.get<boolean>('separateTypeImports', true),
+    separateCssImports: config.get<boolean>('separateCssImports', true),
+    quoteStyle: config.get<QuoteStyle>('quoteStyle', 'detect'),
+    semicolons: config.get<SemicolonStyle>('semicolons', 'detect'),
+    collapseMultilineImports: config.get<boolean>(
+      'collapseMultilineImports',
+      false
+    ),
+    collapseMultilineMaxLength: config.get<number>(
+      'collapseMultilineMaxLength',
+      100
+    ),
+  };
+}
+
+function isGitIgnored(fsPath: string): Promise<boolean> {
+  const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(fsPath));
+  if (!folder || folder.uri.scheme !== 'file') {
+    return Promise.resolve(false);
+  }
+
+  return new Promise((resolve) => {
+    execFile(
+      'git',
+      ['-C', folder.uri.fsPath, 'check-ignore', '-q', '--', fsPath],
+      (error) => {
+        // exit 0 → ignored (error is null)
+        // exit 1 → not ignored
+        // other → treat as not ignored
+        resolve(error == null);
+      }
+    );
+  });
+}
+
+async function shouldSkipDocument(
+  document: vscode.TextDocument
+): Promise<boolean> {
+  if (document.uri.scheme !== 'file') {
+    return false;
+  }
+  return isGitIgnored(document.uri.fsPath);
+}
+
+function buildSortEdits(
   document: vscode.TextDocument
 ): vscode.TextEdit[] | null {
   const languageId = document.languageId;
@@ -65,7 +128,7 @@ function sortDocumentText(
   }
 
   const text = document.getText();
-  const sorted = sortImportsInText(text, languageId);
+  const sorted = sortImportsInText(text, languageId, getSortOptions());
   if (sorted === null) {
     return null;
   }
@@ -77,59 +140,160 @@ function sortDocumentText(
   return [vscode.TextEdit.replace(fullRange, sorted)];
 }
 
-export function activate(context: vscode.ExtensionContext) {
-  const disposable = vscode.commands.registerCommand('importsSort.sort', () => {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-      vscode.window.showInformationMessage('Imports Sort: no active editor');
-      return;
-    }
+function rangeIntersectsImportRegion(
+  document: vscode.TextDocument,
+  range: vscode.Range
+): boolean {
+  const kind = kindForLanguageId(document.languageId);
+  if (!kind) {
+    return false;
+  }
 
-    const languageId = editor.document.languageId;
-    if (!kindForLanguageId(languageId)) {
-      vscode.window.showInformationMessage(
-        'Imports Sort: supports PHP, Vue, JavaScript, JSX, TypeScript, and TSX'
-      );
-      return;
-    }
+  const lines = document.getText().split(/\r?\n/);
 
-    if (!isFileEnabled(editor.document)) {
-      const ext = getDocumentExtension(editor.document) ?? languageId;
-      vscode.window.showInformationMessage(
-        `Imports Sort: "${ext}" is disabled in importsSort.fileExtensions`
-      );
-      return;
-    }
-
-    const edits = sortDocumentText(editor.document);
-    if (!edits) {
-      vscode.window.showInformationMessage(
-        'Imports Sort: nothing to sort (no imports, or already sorted)'
-      );
-      return;
-    }
-
-    return editor.edit((editBuilder) => {
-      for (const edit of edits) {
-        editBuilder.replace(edit.range, edit.newText);
+  if (document.languageId === 'vue') {
+    const scriptOpen = /<script\b[^>]*>/i;
+    const scriptClose = /<\/script>/i;
+    let i = 0;
+    while (i < lines.length) {
+      if (!scriptOpen.test(lines[i])) {
+        i++;
+        continue;
       }
-    });
-  });
+      const scriptStart = i + 1;
+      let scriptEnd = -1;
+      for (let j = scriptStart; j < lines.length; j++) {
+        if (scriptClose.test(lines[j])) {
+          scriptEnd = j;
+          break;
+        }
+      }
+      if (scriptEnd === -1) {
+        break;
+      }
+      const region = findImportRegion(lines, 'esm', scriptStart, scriptEnd);
+      if (region) {
+        const regionRange = new vscode.Range(region.start, 0, region.end, 0);
+        if (range.intersection(regionRange)) {
+          return true;
+        }
+      }
+      i = scriptEnd + 1;
+    }
+    return false;
+  }
+
+  const region = findImportRegion(lines, kind);
+  if (!region) {
+    return false;
+  }
+  const regionRange = new vscode.Range(region.start, 0, region.end, 0);
+  return range.intersection(regionRange) !== undefined;
+}
+
+class SortImportsCodeActionProvider implements vscode.CodeActionProvider {
+  static readonly providedCodeActionKinds = [
+    vscode.CodeActionKind.Source.append('sortImports'),
+    vscode.CodeActionKind.QuickFix,
+  ];
+
+  provideCodeActions(
+    document: vscode.TextDocument,
+    range: vscode.Range | vscode.Selection
+  ): vscode.CodeAction[] | undefined {
+    if (!kindForLanguageId(document.languageId) || !isFileEnabled(document)) {
+      return;
+    }
+    if (!rangeIntersectsImportRegion(document, range)) {
+      return;
+    }
+
+    const action = new vscode.CodeAction(
+      'Sort Imports',
+      vscode.CodeActionKind.Source.append('sortImports')
+    );
+    action.command = {
+      command: 'importsSort.sort',
+      title: 'Sort Imports',
+    };
+    return [action];
+  }
+}
+
+export function activate(context: vscode.ExtensionContext) {
+  const disposable = vscode.commands.registerCommand(
+    'importsSort.sort',
+    async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showInformationMessage('Imports Sort: no active editor');
+        return;
+      }
+
+      const languageId = editor.document.languageId;
+      if (!kindForLanguageId(languageId)) {
+        vscode.window.showInformationMessage(
+          'Imports Sort: supports PHP, Vue, JavaScript, JSX, TypeScript, and TSX'
+        );
+        return;
+      }
+
+      if (!isFileEnabled(editor.document)) {
+        const ext = getDocumentExtension(editor.document) ?? languageId;
+        vscode.window.showInformationMessage(
+          `Imports Sort: "${ext}" is disabled in importsSort.fileExtensions`
+        );
+        return;
+      }
+
+      if (await shouldSkipDocument(editor.document)) {
+        vscode.window.showInformationMessage(
+          'Imports Sort: skipped (file is gitignored)'
+        );
+        return;
+      }
+
+      const edits = buildSortEdits(editor.document);
+      if (!edits) {
+        vscode.window.showInformationMessage(
+          'Imports Sort: nothing to sort (no imports, or already sorted)'
+        );
+        return;
+      }
+
+      return editor.edit((editBuilder) => {
+        for (const edit of edits) {
+          editBuilder.replace(edit.range, edit.newText);
+        }
+      });
+    }
+  );
 
   const onWillSave = vscode.workspace.onWillSaveTextDocument((event) => {
     if (!shouldSortOnSave()) {
       return;
     }
 
-    const edits = sortDocumentText(event.document);
-    if (!edits) {
-      return;
-    }
-
-    event.waitUntil(Promise.resolve(edits));
+    event.waitUntil(
+      (async () => {
+        if (await shouldSkipDocument(event.document)) {
+          return [] as vscode.TextEdit[];
+        }
+        return buildSortEdits(event.document) ?? [];
+      })()
+    );
   });
 
-  context.subscriptions.push(disposable, onWillSave);
+  const codeActions = vscode.languages.registerCodeActionsProvider(
+    SUPPORTED_LANGUAGE_SELECTOR,
+    new SortImportsCodeActionProvider(),
+    {
+      providedCodeActionKinds:
+        SortImportsCodeActionProvider.providedCodeActionKinds,
+    }
+  );
+
+  context.subscriptions.push(disposable, onWillSave, codeActions);
 }
 
 export function deactivate() {}
