@@ -1,0 +1,36 @@
+{
+  "name": "imports-sort",
+  "displayName": "Imports Sort",
+  "description": "Sort PHP use and JS/TS/Vue import statements shortest to longest, preserving sections",
+  "version": "0.0.2",
+  "publisher": "imports-sort",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Formatters",
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "importsSort.sort",
+        "title": "Sort Imports",
+        "category": "Imports Sort"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "node ./out/test/sortImports.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.3"
+  }
+}
