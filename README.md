@@ -40,16 +40,25 @@ Non-CSS sections stay separate; CSS imports are collected and sorted at the bott
 
 ## Install
 
-### From VSIX
+### From GitHub Releases
+
+Download the latest `.vsix` from [Releases](https://github.com/martinshaw/imports-sort/releases), then:
 
 ```bash
-npm install
-npm run compile
-npx @vscode/vsce package --allow-missing-repository
-cursor --install-extension ./imports-sort-1.0.0.vsix
+cursor --install-extension ./imports-sort-x.y.z.vsix
 ```
 
 Or use **Extensions: Install from VSIX…** in the Command Palette.
+
+Pushing a `v*` tag (e.g. `v1.1.1`) runs CI: tests, packages the VSIX, and publishes a GitHub Release with the asset attached. You can also re-run packaging for an existing tag via **Actions → Release → Run workflow**.
+
+### From source
+
+```bash
+npm install
+npm run package
+cursor --install-extension ./imports-sort-1.1.1.vsix
+```
 
 ### Development
 
@@ -78,7 +87,7 @@ Other languages are rejected with a short message.
 | `npm run compile` | Compile TypeScript to `out/` |
 | `npm run watch` | Compile on change |
 | `npm test` | Run sort-logic unit tests |
-| `npx @vscode/vsce package` | Build a `.vsix` |
+| `npm run package` | Build a `.vsix` |
 
 ## Project layout
 

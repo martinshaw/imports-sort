@@ -2,8 +2,13 @@
   "name": "imports-sort",
   "displayName": "Imports Sort",
   "description": "Sort PHP use and JS/TS/Vue import statements shortest to longest, preserving sections",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publisher": "imports-sort",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/martinshaw/imports-sort.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -75,11 +80,13 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "node ./out/test/sortImports.test.js"
+    "test": "node ./out/test/sortImports.test.js",
+    "package": "vsce package"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.3.2",
     "typescript": "^5.3.3"
   }
 }
