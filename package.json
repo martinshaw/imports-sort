@@ -2,9 +2,10 @@
   "name": "imports-sort",
   "displayName": "Imports Sort",
   "description": "Sort PHP use and JS/TS/Vue import statements shortest to longest, preserving sections",
-  "version": "1.2.1",
-  "publisher": "martinshaw",
+  "version": "1.2.2",
+  "publisher": "martinshaw-co",
   "author": "Martin Shaw <hello@martinshaw.co>",
+  "homepage": "https://martinshaw.co",
   "license": "MIT",
   "repository": {
     "type": "git",
