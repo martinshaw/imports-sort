@@ -2,7 +2,7 @@
   "name": "imports-sort",
   "displayName": "Imports Sort",
   "description": "Sort PHP use and JS/TS/Vue import statements shortest to longest, preserving sections",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "imports-sort",
   "license": "MIT",
   "repository": {
@@ -80,7 +80,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "node ./out/test/sortImports.test.js",
+    "test": "npm run compile && node ./out/test/sortImports.test.js",
     "package": "vsce package"
   },
   "devDependencies": {
