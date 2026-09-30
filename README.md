@@ -57,7 +57,7 @@ Pushing a `v*` tag (e.g. `v1.1.1`) runs CI: tests, packages the VSIX, and publis
 ```bash
 npm install
 npm run package
-cursor --install-extension ./imports-sort-1.2.2.vsix
+cursor --install-extension ./imports-sort-1.2.3.vsix
 ```
 
 ### Development
