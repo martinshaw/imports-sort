@@ -2,7 +2,7 @@
   "name": "imports-sort",
   "displayName": "Imports Sort",
   "description": "Sort PHP use and JS/TS/Vue import statements shortest to longest, preserving sections",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "publisher": "martinshaw",
   "author": "Martin Shaw <hello@martinshaw.co>",
   "homepage": "https://martinshaw.co",
